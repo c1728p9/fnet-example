@@ -28,6 +28,7 @@
 ***************************************************************************/
 
 #include "fnet.h"
+#include "fsl_common.h"
 
 #if FNET_MK
 #if !FNET_OS
@@ -39,43 +40,46 @@
 *************************************************************************/
 fnet_return_t fnet_cpu_isr_install(fnet_uint32_t vector_number, fnet_uint32_t priority)
 {
-    fnet_return_t   result;
-    fnet_uint32_t   *irq_vec;
-    fnet_uint32_t   divider;
-    fnet_uint32_t   irq_number; /* The irq number NOT the vector number.*/
+    fnet_return_t   result = FNET_OK;
+//    fnet_uint32_t   *irq_vec;
+//    fnet_uint32_t   divider;
+    fnet_uint32_t   irq_number = vector_number - 16; /* The irq number NOT the vector number.*/
 
-    irq_vec = (fnet_uint32_t *)(FNET_CFG_CPU_VECTOR_TABLE) + vector_number;
+    InstallIRQHandler(irq_number, FNET_ISR_HANDLER);
+    EnableIRQ(irq_number);
 
-    if(*irq_vec != (fnet_uint32_t) FNET_ISR_HANDLER)
-    {
-        /* It's not installed yet.*/
-        *irq_vec = (fnet_uint32_t) FNET_ISR_HANDLER;
-    }
-
-    if(priority > FNET_CFG_CPU_VECTOR_PRIORITY_MAX)
-    {
-        priority = FNET_CFG_CPU_VECTOR_PRIORITY_MAX;
-    }
-
-    if(*irq_vec == (fnet_uint32_t) FNET_ISR_HANDLER)
-    {
-        /* Make sure that the IRQ is an allowable number. */
-        irq_number = vector_number - 16u;
-        divider = irq_number / 32u;
-        if(divider < 3u)
-        {
-            /* Initialize the NVIC to enable the specified IRQ.*/
-            FNET_MK_NVIC_ICPR(divider) |= (fnet_uint32_t)(1u << (irq_number % 32u)); /* Clear-pending. */
-            FNET_MK_NVIC_ISER(divider) |= (fnet_uint32_t)(1u << (irq_number % 32u)); /* Set-enable.*/
-            /* Set priority.*/
-            FNET_MK_NVIC_IP(irq_number) = (fnet_uint8_t)(FNET_CFG_CPU_VECTOR_PRIORITY_MAX - priority) << 4;
-        }
-        result = FNET_OK;
-    }
-    else
-    {
-        result = FNET_ERR;
-    }
+//    irq_vec = (fnet_uint32_t *)(FNET_CFG_CPU_VECTOR_TABLE) + vector_number;
+//
+//    if(*irq_vec != (fnet_uint32_t) FNET_ISR_HANDLER)
+//    {
+//        /* It's not installed yet.*/
+//        *irq_vec = (fnet_uint32_t) FNET_ISR_HANDLER;
+//    }
+//
+//    if(priority > FNET_CFG_CPU_VECTOR_PRIORITY_MAX)
+//    {
+//        priority = FNET_CFG_CPU_VECTOR_PRIORITY_MAX;
+//    }
+//
+//    if(*irq_vec == (fnet_uint32_t) FNET_ISR_HANDLER)
+//    {
+//        /* Make sure that the IRQ is an allowable number. */
+//        irq_number = vector_number - 16u;
+//        divider = irq_number / 32u;
+//        if(divider < 3u)
+//        {
+//            /* Initialize the NVIC to enable the specified IRQ.*/
+//            FNET_MK_NVIC_ICPR(divider) |= (fnet_uint32_t)(1u << (irq_number % 32u)); /* Clear-pending. */
+//            FNET_MK_NVIC_ISER(divider) |= (fnet_uint32_t)(1u << (irq_number % 32u)); /* Set-enable.*/
+//            /* Set priority.*/
+//            FNET_MK_NVIC_IP(irq_number) = (fnet_uint8_t)(FNET_CFG_CPU_VECTOR_PRIORITY_MAX - priority) << 4;
+//        }
+//        result = FNET_OK;
+//    }
+//    else
+//    {
+//        result = FNET_ERR;
+//    }
 
     return result;
 }
