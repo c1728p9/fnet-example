@@ -15,6 +15,8 @@
 #include "StackMemory.h"
 #include "fnet_eth_prv.h"
 
+extern Mutex mut;
+
 typedef struct {
     EmacInterface *emac;
     bool connected;
@@ -146,11 +148,15 @@ void fnet_add_emac(EmacInterface *emac)
     emac->set_link_state_cb(state_change_cb, (void*)&netif);
 
     emac->get_hwaddr(mac_addr);
+    mut.lock();
     fnet_return_t result = fnet_netif_init(&netif, mac_addr, sizeof(fnet_mac_addr_t));
+    mut.unlock();
     if (result != FNET_OK) {
         error("Failed to init netif");
     }
+    mut.lock();
     fnet_netif_set_default(&netif);
+    mut.unlock();
 }
 
 static void fnet_fec_output(fnet_netif_t *netif, fnet_uint16_t type, const fnet_mac_addr_t dest_addr, fnet_netbuf_t *nb)
@@ -214,13 +220,13 @@ static void fnet_fec_release(struct fnet_netif *netif)
 static fnet_return_t fnet_fec_get_hw_addr(struct fnet_netif *netif, fnet_uint8_t *hw_addr)
 {
     EmacInterface *mac = get_mac(netif);
-    mac->set_hwaddr(hw_addr);
+    mac->get_hwaddr(hw_addr);
     return FNET_OK;
 }
 static fnet_return_t fnet_fec_set_hw_addr(struct fnet_netif *netif, fnet_uint8_t *hw_addr)
 {
     EmacInterface *mac = get_mac(netif);
-    mac->get_hwaddr(hw_addr);
+    mac->set_hwaddr(hw_addr);
     return FNET_OK;
 }
 static fnet_bool_t fnet_fec_is_connected(struct fnet_netif *netif)
@@ -246,7 +252,9 @@ static void link_input_cb(void *user_data, StackMem* chain)
     fnet_mac_addr_t local_mac_addr;
 
     // Strip off preamble and SFD
+    mut.lock();
     fnet_netbuf_trim(&nb, 2);
+    mut.unlock();
 
     /* Point to the ethernet header.*/
     //fnet_eth_header_t *ethheader = (fnet_eth_header_t *)fnet_ntohl((fnet_uint32_t)nb->data_ptr);
@@ -256,17 +264,23 @@ static void link_input_cb(void *user_data, StackMem* chain)
     emac->get_hwaddr((uint8_t*)&local_mac_addr);
     if(!fnet_memcmp(ethheader->source_addr, local_mac_addr, sizeof(local_mac_addr)))
     {
+        mut.lock();
         fnet_netbuf_free_chain(nb);
+        mut.unlock();
         return;
     }
 
     //fnet_eth_trace("\nRX", ethheader); /* Print ETH header.*/
 
+    mut.lock();
     fnet_netbuf_trim(&nb, FNET_ETH_HDR_SIZE);
+    mut.unlock();
 
     //TODO - set broadcast and multicast flags
     /* Network-layer input.*/
+    mut.lock();
     fnet_eth_prot_input(netif, nb, ethheader->type);
+    mut.unlock();
 }
 
 static void state_change_cb(void *user_data, bool up)
@@ -289,20 +303,35 @@ StackMemoryFnet::~StackMemoryFnet()
 
 StackMem *StackMemoryFnet::alloc(uint32_t size, uint32_t align)
 {
+    mut.lock();
     fnet_netbuf_t *nb = fnet_netbuf_new(size + align, FNET_TRUE);
+    if (nb == NULL) {
+        error("Out of fnet memory");
+    }
+    MBED_ASSERT(nb->length == size + align);
     uint32_t remainder = (uint32_t)nb->data_ptr % align;
     uint32_t offset = align - remainder;
     if (offset >= align) {
         offset -= align;
     }
     fnet_netbuf_trim(&nb, offset);
+    int right_trim = 0;
+    if (nb->length > size) {
+        right_trim = (int)size - (int)nb->length;
+        fnet_netbuf_trim(&nb, right_trim);
+    }
+
+    MBED_ASSERT(nb->length == size);
+    mut.unlock();
     return (StackMem *)nb;
 }
 
 void StackMemoryFnet::free(StackMem *ptr)
 {
+    mut.lock();
     fnet_netbuf_t *nb = (fnet_netbuf_t *)ptr;
     fnet_netbuf_free_chain(nb);
+    mut.unlock();
 }
 
 uint8_t* StackMemoryFnet::data_ptr(StackMem *ptr)
@@ -326,7 +355,9 @@ void StackMemoryFnet::set_len(StackMem *ptr, uint32_t len)
     }
     // change must be negative
     fnet_int32_t change = len - nb->length;
+    mut.lock();
     fnet_netbuf_trim(&nb, change);
+    mut.unlock();
 }
 
 StackMem *StackMemoryFnet::dequeue_alloc(StackMemChain **ptr)

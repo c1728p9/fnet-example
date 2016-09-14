@@ -1,9 +1,11 @@
 #include "mbed.h"
+#include "rtos.h"
 #include "fnet.h"
 #include "EmacInterfaceOnchip.h"
 
 Serial pc(USBTX, USBRX);
 extern void fnet_add_emac(EmacInterface *emac);
+Mutex mut;
 
 static void fnet_app_init()
 {
@@ -14,6 +16,8 @@ static void fnet_app_init()
     init_params.netheap_ptr = stack_heap;
     init_params.netheap_size = 30000;
 
+
+    mut.lock();
     /* Init FNET stack */
     if(fnet_init(&init_params) != FNET_ERR)
     {
@@ -21,6 +25,7 @@ static void fnet_app_init()
     }
 
     fnet_add_emac(get_onchip_emac());
+    mut.unlock();
 }
 
 static void udp_listen()
@@ -30,45 +35,56 @@ static void udp_listen()
     fnet_address_family_t family = AF_INET6; // AF_INET for IPv4
 
     /* Create listen socket */
+    mut.lock();
     if((udp_socket = fnet_socket(family, SOCK_DGRAM, 0)) == FNET_ERR)
     {
         pc.printf("BENCH: Socket creation error.\n");
+        mut.unlock();
         return;
     }
+    mut.unlock();
 
     struct sockaddr         local_addr;
     fnet_memset_zero(&local_addr, sizeof(local_addr));
     local_addr.sa_port = fnet_htons(1234);
     local_addr.sa_family = family;
+    mut.lock();
     if(fnet_socket_bind(udp_socket, &local_addr, sizeof(local_addr)) == FNET_ERR)
     {
         FNET_DEBUG("BENCH: Socket bind error.\n");
         fnet_socket_close(udp_socket);
+        mut.unlock();
         return;
     }
+    mut.unlock();
 
     while (1) {
 
         /* Receive data */
         struct sockaddr addr;
         fnet_size_t addr_len = sizeof(addr);
+        mut.lock();
         fnet_int32_t received = fnet_socket_recvfrom(udp_socket, buffer, sizeof(buffer), 0,
                                                      &addr, &addr_len );
+        mut.unlock();
         if(received > 0)
         {
             char ip_str[FNET_IP_ADDR_STR_SIZE];
             pc.printf("Receiving from %s:%d\r\n",  fnet_inet_ntop(addr.sa_family, (fnet_uint8_t *)(addr.sa_data), ip_str, sizeof(ip_str)), fnet_ntohs(addr.sa_port));
-            pc.printf("Recieved data %s\r\n", buffer);
+            pc.printf("Recieved data \"%s\"\r\n", buffer);
 
 
             const char resp[] = "recieved packet";
+            mut.lock();
             fnet_int32_t send_ret = fnet_socket_sendto(udp_socket, (fnet_uint8_t *)resp, sizeof(resp), 0, &addr, sizeof(addr));
+            mut.unlock();
             pc.printf("Send ret: %i\r\n", send_ret);
 
         }
     }
-
+    mut.lock();
     fnet_socket_close(udp_socket);
+    mut.unlock();
 
 }
 

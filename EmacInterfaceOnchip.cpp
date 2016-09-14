@@ -375,7 +375,7 @@ bool MacInterfaceOnchip::low_level_init()
     config.interrupt = kENET_RxFrameInterrupt | kENET_TxFrameInterrupt;
   }
   config.rxMaxFrameLen = ENET_ETH_MAX_FLEN;
-  config.macSpecialConfig = kENET_ControlFlowControlEnable | kENET_ControlPromiscuousEnable;// added kENET_ControlPromiscuousEnable
+  config.macSpecialConfig = kENET_ControlFlowControlEnable /*| kENET_ControlPromiscuousEnable */;// added kENET_ControlPromiscuousEnable
   config.txAccelerConfig = kENET_TxAccelIsShift16Enabled;
   config.rxAccelerConfig = kENET_RxAccelisShift16Enabled | kENET_RxAccelMacCheckEnabled;
   uint8_t hw_addr[6];
@@ -434,6 +434,20 @@ StackMem *MacInterfaceOnchip::k64f_low_level_input(int idx)
     /* Zero-copy */
     p = rx_buff[idx];
     mem->set_len(p, length);
+
+//    uint8_t* prx = mem->data_ptr(p);
+//    printf("emac input:\r\n");
+//    printf("  type: 0x%x\r\n", (prx[2 + 6 + 6 + 0] << 8) | (prx[2 + 6 + 6 + 1] << 0));
+//    printf("  dst: ");
+//    for (int i = 0; i < 6; i++) {
+//        printf("%02hhx,", prx[2 + i]);
+//    }
+//    printf("\r\n");
+//    printf("  src: ");
+//    for (int i = 0; i < 6; i++) {
+//        printf("%02hhx,", prx[2 + 6 + i]);
+//    }
+//    printf("\r\n");
 
     /* Attempt to queue new buffer */
     temp_rxbuf = mem->alloc(ENET_ETH_MAX_FLEN, ENET_BUFF_ALIGNMENT);
@@ -513,6 +527,18 @@ bool MacInterfaceOnchip::k64f_low_level_output(StackMemChain *chain)
     memcpy(dst, mem->data_ptr(q), mem->len(q));
     dst += mem->len(q);
   }
+//  printf("emac output:\r\n");
+//  printf("  type: 0x%x\r\n", (psend[2 + 6 + 6 + 0] << 8) | (psend[2 + 6 + 6 + 0] << 0));
+//  printf("  dst: ");
+//  for (int i = 0; i < 6; i++) {
+//      printf("%02hhx,", psend[2 + i]);
+//  }
+//  printf("\r\n");
+//  printf("  src: ");
+//  for (int i = 0; i < 6; i++) {
+//      printf("%02hhx,", psend[2 + 6 + i]);
+//  }
+//  printf("\r\n");
 
   // TODO - how did this work? - nothing signals this
   /* Wait until a descriptor is available for the transfer. */
