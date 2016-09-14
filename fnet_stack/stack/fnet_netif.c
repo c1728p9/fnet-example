@@ -85,18 +85,18 @@ fnet_return_t fnet_netif_init_all( void )
      * Initialize IFs.
      ************************************/
 #if FNET_CFG_CPU_ETH0
-    /* Initialise eth0 interface.*/
-    {
-        fnet_mac_addr_t macaddr = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55}; /* In case fnet_str_to_mac() will fail.*/
-
-        /* Set MAC Address.*/
-        fnet_str_to_mac(FNET_CFG_CPU_ETH0_MAC_ADDR, macaddr);
-        result = fnet_netif_init((fnet_netif_t *)FNET_ETH0_IF, macaddr, sizeof(fnet_mac_addr_t));
-        if(result == FNET_ERR)
-        {
-            goto INIT_ERR;
-        }
-    }
+//    /* Initialise eth0 interface.*/
+//    {
+//        fnet_mac_addr_t macaddr = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55}; /* In case fnet_str_to_mac() will fail.*/
+//
+//        /* Set MAC Address.*/
+//        fnet_str_to_mac(FNET_CFG_CPU_ETH0_MAC_ADDR, macaddr);
+//        result = fnet_netif_init((fnet_netif_t *)FNET_ETH0_IF, macaddr, sizeof(fnet_mac_addr_t));
+//        if(result == FNET_ERR)
+//        {
+//            goto INIT_ERR;
+//        }
+//    }
 #endif
 #if FNET_CFG_CPU_ETH1
     /* Initialise eth1 interface.*/
@@ -127,14 +127,14 @@ fnet_return_t fnet_netif_init_all( void )
     /* Set address parameters of the Ethernet interface.*/
 #if FNET_CFG_IP4
 #if FNET_CFG_CPU_ETH0
-    {
-        fnet_netif_set_ip4_addr(FNET_ETH0_IF, FNET_CFG_ETH0_IP4_ADDR);
-        fnet_netif_set_ip4_subnet_mask(FNET_ETH0_IF, FNET_CFG_ETH0_IP4_MASK);
-        fnet_netif_set_ip4_gateway(FNET_ETH0_IF, FNET_CFG_ETH0_IP4_GW);
-#if FNET_CFG_DNS
-        fnet_netif_set_ip4_dns(FNET_ETH0_IF, FNET_CFG_ETH0_IP4_DNS);
-#endif
-    }
+//    {
+//        fnet_netif_set_ip4_addr(FNET_ETH0_IF, FNET_CFG_ETH0_IP4_ADDR);
+//        fnet_netif_set_ip4_subnet_mask(FNET_ETH0_IF, FNET_CFG_ETH0_IP4_MASK);
+//        fnet_netif_set_ip4_gateway(FNET_ETH0_IF, FNET_CFG_ETH0_IP4_GW);
+//#if FNET_CFG_DNS
+//        fnet_netif_set_ip4_dns(FNET_ETH0_IF, FNET_CFG_ETH0_IP4_DNS);
+//#endif
+//    }
 #endif /* FNET_CFG_CPU_ETH0 */
 #if FNET_CFG_CPU_ETH1
     {

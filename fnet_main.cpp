@@ -121,7 +121,7 @@ static emac_state_t state;
 
 EmacInterface *get_onchip_mac(void);
 
-void fnet_add_mac(EmacInterface *emac)
+void fnet_add_emac(EmacInterface *emac)
 {
     static StackMemoryFnet mem;
     uint8_t mac_addr[6];
@@ -161,10 +161,14 @@ static void fnet_fec_output(fnet_netif_t *netif, fnet_uint16_t type, const fnet_
 
     if((nb != 0) && (nb->total_length <= netif->mtu))
     {
-        fnet_netbuf_t *temp_nb = fnet_netbuf_new(FNET_ETH_HDR_SIZE, FNET_TRUE);
+        fnet_netbuf_t *temp_nb = fnet_netbuf_new(FNET_ETH_HDR_SIZE + 2, FNET_TRUE);
         nb = fnet_netbuf_concat(temp_nb, nb);
 
-        ethheader = (fnet_eth_header_t *)fnet_ntohl((fnet_uint32_t)nb->data_ptr);
+        *(uint8_t*)(nb->data_ptr + 0) = 0xFF;
+        *(uint8_t*)(nb->data_ptr + 1) = 0x00;
+
+        //ethheader = (fnet_eth_header_t *)fnet_ntohl((fnet_uint32_t)nb->data_ptr);
+        ethheader = (fnet_eth_header_t *)((uint8_t*)nb->data_ptr + 2);
 
         //TODO - make sure checksum doesn't need to be cleared
 
@@ -188,12 +192,12 @@ static void fnet_fec_output(fnet_netif_t *netif, fnet_uint16_t type, const fnet_
 static void fnet_fec_multicast_join(fnet_netif_t *netif, fnet_mac_addr_t multicast_addr)
 {
     //TODO - support multicast
-    error("Multicast unsupported");
+    //error("Multicast unsupported");
 }
 static void fnet_fec_multicast_leave(fnet_netif_t *netif, fnet_mac_addr_t multicast_addr)
 {
     //TODO - support multicast
-    error("Multicast unsupported");
+    //error("Multicast unsupported");
 }
 
 static fnet_return_t fnet_fec_init(struct fnet_netif *netif)
@@ -241,8 +245,12 @@ static void link_input_cb(void *user_data, StackMem* chain)
 
     fnet_mac_addr_t local_mac_addr;
 
+    // Strip off preamble and SFD
+    fnet_netbuf_trim(&nb, 2);
+
     /* Point to the ethernet header.*/
-    fnet_eth_header_t *ethheader = (fnet_eth_header_t *)fnet_ntohl((fnet_uint32_t)nb->data_ptr);
+    //fnet_eth_header_t *ethheader = (fnet_eth_header_t *)fnet_ntohl((fnet_uint32_t)nb->data_ptr);
+    fnet_eth_header_t *ethheader = (fnet_eth_header_t *)nb->data_ptr;
 
     /* Just ignore our own "bounced" packets.*/
     emac->get_hwaddr((uint8_t*)&local_mac_addr);
@@ -254,7 +262,7 @@ static void link_input_cb(void *user_data, StackMem* chain)
 
     //fnet_eth_trace("\nRX", ethheader); /* Print ETH header.*/
 
-    fnet_netbuf_trim(&nb, sizeof(fnet_eth_header_t));
+    fnet_netbuf_trim(&nb, FNET_ETH_HDR_SIZE);
 
     //TODO - set broadcast and multicast flags
     /* Network-layer input.*/

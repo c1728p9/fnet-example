@@ -375,7 +375,7 @@ bool MacInterfaceOnchip::low_level_init()
     config.interrupt = kENET_RxFrameInterrupt | kENET_TxFrameInterrupt;
   }
   config.rxMaxFrameLen = ENET_ETH_MAX_FLEN;
-  config.macSpecialConfig = kENET_ControlFlowControlEnable;
+  config.macSpecialConfig = kENET_ControlFlowControlEnable | kENET_ControlPromiscuousEnable;// added kENET_ControlPromiscuousEnable
   config.txAccelerConfig = kENET_TxAccelIsShift16Enabled;
   config.rxAccelerConfig = kENET_RxAccelisShift16Enabled | kENET_RxAccelMacCheckEnabled;
   uint8_t hw_addr[6];

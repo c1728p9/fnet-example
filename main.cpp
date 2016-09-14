@@ -1,7 +1,9 @@
 #include "mbed.h"
 #include "fnet.h"
+#include "EmacInterfaceOnchip.h"
 
 Serial pc(USBTX, USBRX);
+extern void fnet_add_emac(EmacInterface *emac);
 
 static void fnet_app_init()
 {
@@ -17,6 +19,8 @@ static void fnet_app_init()
     {
         pc.printf("Fnet initialized\r\n");
     }
+
+    fnet_add_emac(get_onchip_emac());
 }
 
 static void udp_listen()
